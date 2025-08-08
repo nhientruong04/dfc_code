@@ -1,0 +1,6 @@
+.venv
+*.log
+*.whl
+.python-version
+*.png
+*test*
