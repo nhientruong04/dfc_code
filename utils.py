@@ -1,38 +1,41 @@
 # General imports used throughout the tutorial
 # file operations
 import os
-from typing import List, Optional
 from loguru import logger
 
 import numpy as np
+from typing import List
 from tqdm import tqdm
 from PIL import Image
 
-# from hailo_sdk_client import ClientRunner, InferenceContext
 
-
-def build_calib_dataset(image_folders: List[str], num: int = 1024,
-                        output_height: int = 256, output_width: int = 256) -> np.array:
-    norm = False
-    calib_dataset = list()
-    total_images = 0
+def build_dataset(image_folders: List[str], calib: bool = False,
+                  output_height: int = 256, output_width: int = 256) -> np.array:
+    norm: bool = False
+    dataset: List = list()
+    total_images: int = 0
 
     for image_folder in image_folders:
         print(f'Get images from {image_folder}')
-        dataset = get_dataset(image_folder, norm, output_height, output_width)
-        total_images += dataset.shape[0]
-        calib_dataset.append(dataset)
+        data = get_dataset(image_folder, norm, output_height, output_width)
+        total_images += data.shape[0]
+        dataset.append(data)
 
-    if total_images < num:
-        logger.warning(f'Total of images {total_images} received is less than '
-                       'the expected number of items for calib.')
+    if calib:
+
+        if total_images < 1024:
+            logger.warning(f'Total of images {total_images} received is less than '
+                           'the expected number of items for calib.')
+            return np.concatenate(dataset)
+        else:
+            logger.info(f'Build calib dataset successfully with total {total_images} '
+                        f'the dataset will be clipped to {1024}.')
+            return np.concatenate(dataset)[:1024]
+
     else:
-        logger.info(f'Build calib dataset successfully total {total_images} '
-                    'the dataset will be clipped to {num}.')
 
-    return \
-        np.concatenate(calib_dataset) if total_images < num \
-        else np.concatenate(calib_dataset)[:1024]
+        logger.info(f'Build dataset successfully with total {total_images}.')
+        return np.concatenate(dataset)
 
 
 def get_dataset(image_folder: str, norm: bool,
@@ -42,7 +45,7 @@ def get_dataset(image_folder: str, norm: bool,
     image_paths = [os.path.join(image_folder, i) for i in image_list]
 
     images = np.empty((len(image_list), output_height,
-                      output_width, 3), dtype=np.uint8)
+                       output_width, 3), dtype=np.uint8)
 
     description = 'Building normed dataset' if norm else 'Building un-normed dataset'
 
@@ -64,11 +67,11 @@ def get_dataset(image_folder: str, norm: bool,
 
 
 if __name__ == "__main__":
-    # image_folder = '/home/nhien/mvtec-ad/bottle/train/good/'
-    # get_dataset(image_folder, norm=False,
-    #             output_height=256, output_width=256)
     image_folders = ['/home/nhien/mvtec-ad/bottle/train/good/',
-                     '/home/nhien/mvtec-ad/cable/train/good/']
+                     '/home/nhien/mvtec-ad/cable/train/good/',
+                     '/home/nhien/mvtec-ad/wood/train/good/']
 
-    calib_databset = build_calib_dataset(image_folders)
+    calib_databset = build_dataset(image_folders, calib=True)
     print(calib_databset.shape)
+
+    np.save('test_bottle_dataset.npy', calib_databset)
