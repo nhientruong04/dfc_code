@@ -4,3 +4,6 @@
 .python-version
 *.png
 *test*
+*.har
+*.hef
+*.onnx
